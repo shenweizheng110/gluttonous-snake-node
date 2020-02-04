@@ -1,0 +1,11 @@
+{
+    "presets": [
+        "@babel/env",
+        ["@babel/typescript", { "isTSX": false, "allExtensions": true }]
+    ],
+    "plugins": [
+        ["@babel/plugin-transform-typescript", {
+            "allowNamespaces": true
+        }]
+    ]
+}

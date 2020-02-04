@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist",
+        "target": "es2018",
+        "module": "commonjs",
+        "allowJs": true,
+        "checkJs": true,
+        "sourceMap": true,
+        "noImplicitAny": true,
+        "removeComments": true,
+        "types": ["node"],
+        "typeRoots": ["node_modules/@types", "src/types"],
+        "baseUrl": "./",
+        "paths": {
+            "*": ["types/*"]
+        }
+    },
+    "include": [
+        "src/**/*",
+        "start.ts",
+    ],
+    "exclude": [
+        "node_modules",
+        "**/*.spec.ts"
+    ]
+}

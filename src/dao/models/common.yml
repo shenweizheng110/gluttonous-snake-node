@@ -1,0 +1,7 @@
+namespace: 'common'
+
+getTableTotal:
+    - select count(*) as total from ::tableName where is_delete = 0
+
+getAllRoomCover:
+    - select * from room_cover

@@ -1,0 +1,4 @@
+namespace: 'settings'
+
+getSettingsByUserId:
+    - select * from settings where user_id = :userId

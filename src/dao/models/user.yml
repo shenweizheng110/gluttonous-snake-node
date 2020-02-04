@@ -1,0 +1,17 @@
+namespace: 'user'
+
+getPasswordByParams:
+    - select password, username, head_img from user where 1 = 1
+    - if:
+        test: username
+        sql: and username = :username
+    - if:
+        test: email
+        sql: and email = :email
+    - if:
+        test: phone
+        sql: and phone = :phone
+
+getBaseInfo:
+    - select id, username, phone, email, age, gender, province, city, detail_address, favour, signature, head_img
+    - from user where id = :userId
