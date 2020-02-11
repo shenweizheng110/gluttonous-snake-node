@@ -26,21 +26,22 @@ declare namespace Settings {
 
     interface UserConfig {
         id: number;
-        userId: number;
-        up: number;
-        down: number;
-        left: number;
-        right: number;
-        start: number;
-        pause: number;
-        exit: number;
-        speedUp: number;
+        userId: string;
+        up: string;
+        down: string;
+        left: string;
+        right: string;
+        start: string;
+        pause: string;
+        exit: string;
+        speedUp: string;
         showFight: number;
         showPersonal: number;
         initSpeed: number;
         dangerColor: string;
         nodeColor: string;
         eyeColor: string;
+        initDirection: string;
         createTime: Date;
         updateTime: Date;
     }

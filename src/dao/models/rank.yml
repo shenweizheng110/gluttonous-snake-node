@@ -1,0 +1,28 @@
+namespace: 'rank'
+
+getScoreRank:
+    - select max_score as value, head_img, username, favour, ugi.user_id, uf.id as favourRecordId
+    - from user_game_info ugi
+    - left join user u on ugi.user_id = u.id
+    - left join user_favour uf on uf.favour_user_id = ugi.user_id and uf.user_id = :userId and uf.is_delete = 0
+    - order by ugi.max_score desc limit :pageStart , :pageSize
+
+getRecordCountRank:
+    - select count(ru.id) as value, head_img, username, favour, ru.user_id, uf.id as favourRecordId
+    - from record_user ru left join user u on ru.user_id = u.id
+    - left join user_favour uf on uf.favour_user_id = ru.user_id and uf.user_id = :userId and uf.is_delete = 0
+    - group by ru.user_id,uf.id
+    - order by count(ru.id) desc limit :pageStart,:pageSize
+
+getDefeatCountRank:
+    - select sum(ru.defeat) as value, head_img, username, favour, ru.user_id, uf.id as favourRecordId
+    - from record_user ru left join user u on ru.user_id = u.id
+    - left join user_favour uf on uf.favour_user_id = ru.user_id and uf.user_id = :userId and uf.is_delete = 0
+    - group by ru.user_id,uf.id
+    - order by count(ru.defeat) desc limit :pageStart,:pageSize
+
+getMaxDefeatRank:
+    - select max_defeat as value, head_img, username, favour, ugi.user_id, uf.id as favourRecordId
+    - from user_game_info ugi left join user u on ugi.user_id = u.id
+    - left join user_favour uf on uf.favour_user_id = ugi.user_id and uf.user_id = :userId and uf.is_delete = 0
+    - order by ugi.max_defeat desc limit :pageStart , :pageSize

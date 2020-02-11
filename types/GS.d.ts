@@ -35,10 +35,13 @@ declare namespace GS {
     interface PageInfoParams {
         page: number;
         pageSize: number;
+        pageStart: number;
     }
 
     // 分页信息
-    interface PageInfoRes extends PageInfoParams {
+    interface PageInfoRes {
+        page: number;
+        pageSize: number;
         total: number;
     }
 

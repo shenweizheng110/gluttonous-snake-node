@@ -23,7 +23,11 @@ export const createRoom: Room.CreateRoom = async (roomInfo) => {
  */
 export const getRoomList: Room.GetRoomList = async (roomInfo: Room.SearchInfo) => {
     let roomList: Room.RoomListItem[] = await dao.query('room.getRoomList', roomInfo);
-    let totalRes: GS.TotalRes = await dao.query('common.getTableTotal', { tableName: 'room' });
+    roomList.forEach(roomItem => {
+        roomItem.hasPassword = roomItem.roomPassword ? true : false;
+        delete roomItem.roomPassword;
+    });
+    let totalRes: GS.TotalRes = await dao.query('room.getRoomTotal', roomInfo);
     let res: Room.GetRoomListRes = {
         roomList,
         pageInfo: {
@@ -54,4 +58,26 @@ export const delRoomById: Room.DelRoom = async (roomId: number) => {
 export const getAllRoomCover: Room.VoidFnc = async () => {
     let roomCoverList: Room.RoomCoverItem[] = await dao.query('common.getAllRoomCover');
     return done<Room.RoomCoverItem[]>(roomCoverList);
+};
+
+/**
+ * 更新房间的人数
+ * @param roomId 房间号
+ * @param peopleCount 房间人数
+ */
+export const updateRoomPeopleCount = async (roomId: string, peopleCount: number) => {
+    let ret = await dao.update('room', {
+        id: roomId,
+        peopleCount
+    });
+    return done<any>(ret[0]);
+};
+
+/**
+ * 获取房间的密码
+ * @param roomId 房间号
+ */
+export const getRoomPassword = async (roomId: string) => {
+    let ret = await dao.query('room.getRoomPassword', { roomId: roomId });
+    return done<any>(ret[0]);
 };

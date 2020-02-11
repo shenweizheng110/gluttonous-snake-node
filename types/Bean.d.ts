@@ -19,11 +19,13 @@ declare namespace Bean {
 
     type Destory = (roomId: string, canvasWidth: number, canvasHeight: number, beanItem: BeanItem) => void;
 
-    type GenerateBean = (roomId: string, canvasWidth: number, canvasHeight: number) => void;
+    type GenerateBean = (roomId: string, canvasWidth: number, canvasHeight: number, neededX?: number, neededY?: number) => void;
 
     type GetAllBeans = (roomId: string) => {
         [id: string]: BeanItem;
     };
+
+    type ClearBeansByRoomId = (roomId: string) => void;
 }
 
 export default Bean;

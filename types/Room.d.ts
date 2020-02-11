@@ -31,6 +31,7 @@ declare namespace Room {
         miniSpeed: number;
         maxSpeed: number;
         peopleCount: number;
+        hasPassword: boolean;
     }
 
     // 创建房间

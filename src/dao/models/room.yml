@@ -4,7 +4,7 @@ getRoomListTotal:
     - select count(*) from room where is_delete = 0
 
 getRoomList:
-    - select r.id as roomId, room_name, init_speed, mini_speed, max_speed, people_count, u.username
+    - select r.id as roomId, room_name, init_speed, mini_speed, max_speed, people_count, u.username, room_cover, owner_id, room_password
     - from room r left join user u on r.owner_id = u.id where r.is_delete = 0
     - if:
         test: roomName
@@ -23,4 +23,25 @@ getRoomList:
         sql: and r.max_speed = :maxSpeed
     - order by r.create_time desc limit :pageStart , :pageSize
 
+getRoomTotal:
+    - select count(r.id) as total
+    - from room r left join user u on r.owner_id = u.id where r.is_delete = 0
+    - if:
+        test: roomName
+        sql: and room_name = :roomName
+    - if:
+        test: roomId
+        sql: and r.id = :roomId
+    - if:
+        test: ownerName
+        sql: and u.username = :ownerName
+    - if:
+        test: miniSpeed
+        sql: and r.mini_speed = :miniSpeed
+    - if:
+        test: maxSpeed
+        sql: and r.max_speed = :maxSpeed
+
+getRoomPassword:
+    - select room_password from room where id = :roomId
 

@@ -22,9 +22,9 @@ const initBean: Bean.IntBean = (x, y, val) => ({
  * @param canvasWidth 最大距离
  * @param canvasHeight 最大高度
  */
-export const generateBean: Bean.GenerateBean = (roomId, canvasWidth, canvasHeight) => {
-    let x = Math.floor(Math.random() * canvasWidth);
-    let y = Math.floor(Math.random() * canvasHeight);
+export const generateBean: Bean.GenerateBean = (roomId, canvasWidth, canvasHeight, neededX, neededY) => {
+    let x = neededX || Math.floor(Math.random() * canvasWidth);
+    let y = neededY || Math.floor(Math.random() * canvasHeight);
     let val = Math.ceil((Math.random() + 2) * 3);
     let bean = initBean(x, y, val);
     beanStore[roomId] = beanStore[roomId] || {};
@@ -49,4 +49,12 @@ export const destory: Bean.Destory = (roomId, canvasWidth, canvasHeight, beanIte
  */
 export const getAllBeans: Bean.GetAllBeans = (roomId: string) => {
     return beanStore[roomId];
+};
+
+/**
+ * 清空房间内的豆子
+ * @param roomId 房间号
+ */
+export const clearBeansByRoomId: Bean.ClearBeansByRoomId = (roomId: string) => {
+    delete beanStore[roomId];
 };

@@ -1,5 +1,6 @@
 import GS from 'GS';
 import GameAPI from 'GameAPI';
+import { validWsIsOpen } from '../game/clientStore';
 
 function done<T = null>(data: T = null): GS.DoneReturn<T> {
     return {
@@ -60,10 +61,12 @@ const formatErrorBaseWs = (errors: any) => {
  * @param payload 参数
  */
 const send: GameAPI.Send = (ws, type, payload) => {
-    ws.send(JSON.stringify({
-        type,
-        data: payload
-    }));
+    if (validWsIsOpen(ws)) {
+        ws.send(JSON.stringify({
+            type,
+            data: payload
+        }));
+    }
 };
 
 /**

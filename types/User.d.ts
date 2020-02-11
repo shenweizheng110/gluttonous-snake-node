@@ -65,6 +65,12 @@ declare namespace User {
 
     // 添加点赞记录
     type AddFavourRecord = (recordInfo: UserFavourRecord) => Promise<GS.DoneReturn<number> | GS.FailRetuen<string, null>>;
+
+    // 注册新用户
+    type RegisterUser = (userInfo: UserInfo) => Promise<GS.DoneReturn<number>>
+
+    // 重置密码
+    type ResetPassword = ({ phone, password }: { phone: string; password: string }) => Promise<GS.DoneReturn<any>>
 }
 
 export default User;

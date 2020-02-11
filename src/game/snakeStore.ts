@@ -3,10 +3,12 @@ import Snake from 'Snake';
 import gameConfig from './gameConfig';
 import { Direction, RotateOffset } from './../../types/Enum';
 import { isBallCrash } from '../common/util';
+import { generateBean } from './beanStore';
+import { changeScore, recordGameByUser, addDefeat } from './gameStore';
 
 let snakeLinkUser: Snake.SnakeLinkUser = {};
 
-let snakes: Snake.Snakes = {};
+// let snakes: Snake.Snakes = {};
 
 let snakeNodes: Snake.SnakeNodes = {};
 
@@ -47,6 +49,7 @@ const SnakeBase: Snake.SnakeBase = {
     rotateOffset: null,
     direction: null,
     userConfig: null,
+    recordNumber: null,
 
     /**
      * 为用户生成蛇
@@ -54,19 +57,21 @@ const SnakeBase: Snake.SnakeBase = {
      * @param userId 用户id
      * @param userConfig 用户配置
      */
-    generateSnakeByUser: (roomId, userId, userConfig, canvasWidth, canvasHeight) => {
+    generateSnakeByUser: (roomId, userId, userConfig) => {
         let currentSnake = snakeLinkUser[roomId] && snakeLinkUser[roomId][userId];
+        let canvasWidth = gameConfig.canvasWidth;
+        let canvasHeight = gameConfig.canvasHeight;
         if (currentSnake) {
             return;
         }
         let snake: Snake.SnakeBase = Object.create(SnakeBase);
         snake.saveSnakeInfo(roomId, userId, userConfig);
         let snakeHead: Snake.SnakeNode = Object.create(snake);
-        let randomX = Math.floor(Math.random() * (canvasWidth - 10 * gameConfig.snakeHeadSize) + 10 * gameConfig.snakeHeadSize);
-        let randomY = Math.floor(Math.random() * (canvasHeight - 10 * gameConfig.snakeHeadSize) + 10 * gameConfig.snakeHeadSize);
+        let randomX = Math.floor(Math.random() * (canvasWidth - 12 * gameConfig.snakeHeadSize) + 12 * gameConfig.snakeHeadSize);
+        let randomY = Math.floor(Math.random() * (canvasHeight - 12 * gameConfig.snakeHeadSize) + 12 * gameConfig.snakeHeadSize);
         snakeHead.initNode(randomX, randomY, true, ++snakeId);
         snake.snakeHeadId = snakeHead.id;
-        snake.recordSnake();
+        // snake.recordSnake();
         snakeLinkUser[roomId] = snakeLinkUser[roomId] || {};
         snakeLinkUser[roomId][userId] = snake;
         for (let i = 0; i < 5; i++) {
@@ -84,6 +89,7 @@ const SnakeBase: Snake.SnakeBase = {
         }
         this.roomId = roomId;
         this.userId = userId;
+        // this.speed = userConfig.initSpeed;
         this.direction = userConfig.initDirection;
         this.rotateOffset = RotateOffset[userConfig.initDirection];
         this.userConfig = userConfig;
@@ -116,9 +122,9 @@ const SnakeBase: Snake.SnakeBase = {
      * 记录蛇
      */
     recordSnake: function () {
-        // console.log('roomId in recordSnake: ', this.roomId);
-        snakes[this.roomId] = snakes[this.roomId] || [];
+        /* snakes[this.roomId] = snakes[this.roomId] || [];
         snakes[this.roomId].push(this);
+        this.recordNumber = snakes[this.roomId].length - 1; */
     },
 
     /**
@@ -174,7 +180,9 @@ const SnakeBase: Snake.SnakeBase = {
         nextTail.x = tail.x + offset[0] * gameConfig.snakeItemInterval;
         nextTail.y = tail.y + offset[1] * gameConfig.snakeItemInterval;
         // 链表连接
+        // 双向链表
         nextTail.preId = tail.id;
+        // nextTail.nextId = this.snakeHeadId;
         tail.nextId = nextTail.id;
         currentRoomSnakeNodes[this.snakeHeadId].preId = nextTail.id;
         // 补齐路径数组
@@ -193,8 +201,8 @@ const SnakeBase: Snake.SnakeBase = {
      * 处理蛇移动
      * @param payload 参数载荷
      */
-    move: function (payload) {
-        let currentRoomSnakeNodes = snakeNodes[payload.roomId];
+    move: function (roomId) {
+        let currentRoomSnakeNodes = snakeNodes[roomId];
         for (let id in currentRoomSnakeNodes) {
             if (!/^\d+(\.\d+)?$/.test(id)) {
                 return;
@@ -214,22 +222,61 @@ const SnakeBase: Snake.SnakeBase = {
             if (snakeNode.nextId) {
                 currentRoomSnakeNodes[snakeNode.nextId].routes.push(...nextNodeRoute);
             }
-            if (snakeNode.isHead) {
-                snakeNode.validCanEat(payload);
-            }
         }
+    },
+
+    validEatOrGameOver: async function(roomId) {
+        let currentRoomSnakeNodes = snakeNodes[roomId];
+        let currentRoomSnakes = SnakeBase.getSnakes(roomId);
+        let gameOverUserIds: string[] = [];
+        currentRoomSnakes.forEach(async (snake) => {
+            let snakeHeadNode = currentRoomSnakeNodes[snake.snakeHeadId];
+            snakeHeadNode.validCanEat(snake.roomId);
+            let isGameOver = snakeHeadNode.validDefeated();
+            if (!isGameOver) {
+                isGameOver = snakeHeadNode.validGameOver();
+            }
+            if (isGameOver) {
+                gameOverUserIds.push(snakeHeadNode.userId);
+                await recordGameByUser(snakeHeadNode.roomId, snakeHeadNode.userId);
+            }
+        });
+        // 对 snakeNodes遍历 存在且userId 不一样 被击杀
+        // 坐标
+        return gameOverUserIds;
+    },
+
+    validDefeated: function() {
+        let currentRoomSnakeNodes = snakeNodes[this.roomId];
+        let isDefeated = false;
+        Object.keys(currentRoomSnakeNodes).some(key => {
+            let snakeNode = currentRoomSnakeNodes[key];
+            if (snakeNode.userId === this.userId) {
+                return false;
+            }
+            if (
+                Math.abs(snakeNode.x - this.x) <= snakeNode.radiusSize + this.radiusSize &&
+                Math.abs(snakeNode.y - this.y) <= snakeNode.radiusSize + this.radiusSize
+            ) {
+                isDefeated = true;
+                addDefeat(this.roomId, snakeNode.userId);
+                this.destoryToBean();
+                return true;
+            }
+        });
+        return isDefeated;
     },
 
     /**
      * 校验有没有豆子可以吃
      * @param paylaod 参数载荷
      */
-    validCanEat: function (payload) {
-        let beanStore = getAllBeans(payload.roomId);
+    validCanEat: function (roomId) {
+        let beanStore = getAllBeans(roomId);
         Object.keys(beanStore).forEach(key => {
             let bean = beanStore[key];
             if (isBallCrash(this.x, this.y, this.radiusSize, bean.x, bean.y, bean.val)) {
-                this.eat(bean, payload);
+                this.eat(bean);
             }
         });
     },
@@ -239,14 +286,15 @@ const SnakeBase: Snake.SnakeBase = {
      * @param bean 被吃的豆子
      * @param payload 其他参数载荷
      */
-    eat: function(bean, payload) {
+    eat: function(bean) {
         this.energy += bean.val;
         this.energyNum += bean.val;
+        changeScore(this.roomId, this.userId, this.energyNum);
         if (this.energy > gameConfig.snakeEnergy) {
             this.energy = 0;
             this.appendToTail();
         }
-        destory(payload.roomId, payload.maxWidth, payload.maxHeight, bean);
+        destory(this.roomId, gameConfig.canvasWidth, gameConfig.canvasHeight, bean);
     },
 
     /**
@@ -259,6 +307,11 @@ const SnakeBase: Snake.SnakeBase = {
         let snake = snakeLinkUser[roomId][userId];
         if (!snake) {
             throw Error('failed to get snake, error in change direction');
+        }
+        let speedUp = snake.userConfig.speedUp;
+        if (speedUp == keyCode + '') {
+            snake.speed = 5;
+            return;
         }
         let directionCode: Snake.KeyCodeConfig = snake.userConfig.directionCode;
         if (!directionCode[keyCode]) {
@@ -274,6 +327,19 @@ const SnakeBase: Snake.SnakeBase = {
         snakeNodes[roomId][snake.snakeHeadId].rotateOffset = RotateOffset[snake.direction];
     },
 
+    // 还原速度
+    destorySpeedUp: (roomId, userId, keyCode) => {
+        let snake = snakeLinkUser[roomId][userId];
+        if (!snake) {
+            throw Error('failed to get snake, error in change direction');
+        }
+        let speedUp = snake.userConfig.speedUp;
+        if (speedUp == keyCode + '') {
+            snake.speed = 2;
+            return;
+        }
+    },
+
     /**
      * 根据 roomId 获取对应房间的蛇及节点的信息
      * @param roomId 房间号
@@ -281,30 +347,78 @@ const SnakeBase: Snake.SnakeBase = {
     getSnakeByRoomId: roomId => {
         return {
             snakeNodes: snakeNodes[roomId],
-            snakes: snakes[roomId]
+            snakes: SnakeBase.getSnakes(roomId)
         };
+    },
+
+    /**
+     * 将蛇变为豆子
+     */
+    destoryToBean: function() {
+        let { roomId, userId } = this;
+        let maxWidth = gameConfig.canvasWidth;
+        let maxHeight = gameConfig.canvasHeight;
+        let currentRoomSnakes = snakeLinkUser[roomId];
+        let currentRoomSnakeNodes = snakeNodes[roomId];
+        if (!currentRoomSnakes) {
+            throw Error('当前对局不存在');
+        }
+        let snake = currentRoomSnakes[userId];
+        if (!snake) {
+            throw Error('该用户的蛇不存在');
+        }
+        let currentNode = currentRoomSnakeNodes[snake.snakeHeadId];
+        while (currentNode) {
+            if (!currentNode) {
+                break;
+            }
+            let randomX = currentNode.x + Math.floor(Math.random() * -10 + 5);
+            let randomY = currentNode.y + Math.floor(Math.random() * -10 + 5);
+            generateBean(roomId, maxWidth, maxHeight, randomX, randomY);
+            delete currentRoomSnakeNodes[currentNode.id];
+            currentNode = currentRoomSnakeNodes[currentNode.nextId];
+        }
+        // snakes[roomId].splice(snake.recordNumber, 1);
+        delete snakeLinkUser[roomId][userId];
     },
 
     /**
      * 校验是否是撞到墙壁或者撞到蛇身
      * todo 判断是否撞到其他的蛇身
+     * 1. 判断是不是用一个snakeHeadId 该值在节点的原型链中
+     * 2. 判断是否相撞
      * @param roomId 房间号
      * @param userId 用户id
      * @param maxWidth 最大宽度
      * @param maxHeight 最大高度
      */
-    validGameOver: (payload) => {
-        let { roomId, userId, maxWidth, maxHeight } = payload;
-        let snake = snakeLinkUser[roomId][userId];
-        let { x, y, radiusSize } = snakeNodes[roomId][snake.snakeHeadId];
-        if (x - radiusSize < 0 || x + radiusSize > maxWidth || y - radiusSize < 0 || y + radiusSize > maxHeight) {
-            if (snake.userId === null || snake.userId === undefined) {
-                throw Error('该snake的userId不存在');
-            } else {
-                return true;
-            }
+    validGameOver: function() {
+        let { x, y, radiusSize } = this;
+        let { canvasWidth, canvasHeight } = gameConfig;
+        if (x - radiusSize <= 0 || x + radiusSize >= canvasWidth || y - radiusSize <= 0 || y + radiusSize >= canvasHeight) {
+            this.destoryToBean();
+            return true;
         }
         return false;
+    },
+
+    /**
+     * 校验是否对局结束
+     */
+    validIsAllOver: (roomId) => {
+        return SnakeBase.getSnakes(roomId).length === 0;
+    },
+
+    /**
+     * 判断当前用户的蛇是否存在 防止用户刷新
+     */
+    validUserExist: (roomId, userId) => {
+        return !!(snakeLinkUser[roomId] && snakeLinkUser[roomId][userId]);
+    },
+
+    // 获取当前房间内所有的蛇
+    getSnakes: (roomId) => {
+        return Object.keys(snakeLinkUser[roomId]).map(userId => snakeLinkUser[roomId][userId]);
     }
 };
 

@@ -9,8 +9,12 @@ import {
     getBaseInfo,
     delFavourRecord,
     addFavourRecord,
-    updateFavour
+    updateFavour,
+    register,
+    getUserByParams,
+    resetPassword
 } from '../services/userService';
+import client from '../common/redisStore';
 
 const router = express.Router();
 
@@ -66,12 +70,9 @@ router.put('/update', async (req: express.Request, res: GS.CustomResponse) => {
         email: joi.string().email(),
         age: joi.number(),
         gender: joi.string().equal('male', 'female'),
-        province: joi.string(),
-        city: joi.string(),
-        detailAddress: joi.string(),
         favour: joi.number(),
         signature: joi.string(),
-        hedaImg: joi.string().uri()
+        headImg: joi.string().uri()
     });
     if (error) {
         res.sendPre(1001, formatError(error));
@@ -86,16 +87,16 @@ router.put('/update', async (req: express.Request, res: GS.CustomResponse) => {
 
 // 用户点赞
 router.post('/favour', async (req: express.Request, res: GS.CustomResponse) => {
-    let currentUserId = 0;
     const { error, value } = joi.validate(req.body, {
+        userId: joi.string().required(),
         favourId: joi.string().required(),
-        recordId: joi.string()
+        recordId: joi.string().allow('', null)
     });
     if (error) {
         res.sendPre(1001, formatError(error));
         return;
     }
-    const { favourId, recordId } = value;
+    const { favourId, recordId, userId } = value;
     const favourIdInt = parseInt(favourId);
     const recordInt = parseInt(recordId);
     const favourUserInfo = await getBaseInfo(favourIdInt);
@@ -111,12 +112,155 @@ router.post('/favour', async (req: express.Request, res: GS.CustomResponse) => {
     } else {
         await updateFavour(favourIdInt, ++currentFavourCount);
         const ret = await addFavourRecord({
-            userId: currentUserId,
+            userId: userId,
             favourUserId: favourIdInt,
             createTime: new Date()
         });
         res.sendPre(ret);
     };
+});
+
+// 用户注册
+router.post('/register', async (req: express.Request, res: GS.CustomResponse) => {
+    const { error, value } = joi.validate(req.body, {
+        username: joi.string().required(),
+        phone: joi.string().required(),
+        code: joi.string().required(),
+        password: joi.string().required(),
+        email: joi.string().required(),
+        age: joi.string().required(),
+        gender: joi.string().required().allow('male', 'female'),
+        signature: joi.string().required(),
+        headImg: joi.string().required(),
+        hash: joi.string().required().allow('', null)
+    });
+    if (error) {
+        res.sendPre(1001, formatError(error));
+        return;
+    }
+    client.getAsync(`${value.hash}_code`)
+        .then(async (code: string) => {
+            if (code !== value.code) {
+                res.sendPre(2003, null);
+                return;
+            }
+            delete value.code;
+            delete value.hash;
+            let existUser = await getUserByParams({ phone: value.phone });
+            if (existUser.data.length !== 0) {
+                res.sendPre(2004, null);
+                return;
+            }
+            existUser = await getUserByParams({ email: value.email });
+            if (existUser.data.length !== 0) {
+                res.sendPre(2005, null);
+                return;
+            }
+            existUser = await getUserByParams({ username: value.username });
+            if (existUser.data.length !== 0) {
+                res.sendPre(2007, null);
+                return;
+            }
+            res.sendPre(await register(value));
+        })
+        .catch((error: any) => {
+            console.log(error);
+            res.sendPre(0, error);
+        });
+});
+
+// 修改手机号
+router.put('/update/phone', async (req: express.Request, res: GS.CustomResponse) => {
+    const { error, value } = joi.validate(req.body, {
+        userId: joi.number().required(),
+        password: joi.string().required(),
+        phone: joi.string().regex(phone),
+        code: joi.string().required(),
+        hash: joi.string().required().allow('', null)
+    });
+    if (error) {
+        res.sendPre(1001, formatError(error));
+        return;
+    }
+    let ret = await getUserByParams({ userId: value.userId });
+    let existUser = ret.data[0];
+    if (existUser.password !== value.password) {
+        res.sendPre(2008, null);
+        return;
+    }
+    client.getAsync(`${value.hash}_code`)
+        .then(async (code: string) => {
+            if (code !== value.code) {
+                res.sendPre(2003, null);
+                return;
+            }
+            value.id = value.userId;
+            value.updateTime = new Date();
+            delete value.code;
+            delete value.password;
+            delete value.hash;
+            delete value.userId;
+            let ret = await updateUser(value);
+            res.sendPre(ret);
+        })
+        .catch((error: any) => {
+            console.log(error);
+            res.sendPre(0, error);
+        });
+});
+
+// 修改密码
+router.put('/update/password', async (req: express.Request, res: GS.CustomResponse) => {
+    const { error, value } = joi.validate(req.body, {
+        userId: joi.number().required(),
+        oldPassword: joi.string().required(),
+        newPassword: joi.string().required()
+    });
+    if (error) {
+        res.sendPre(1001, formatError(error));
+        return;
+    }
+    let ret = await getUserByParams({ userId: value.userId });
+    let existUser = ret.data[0];
+    if (existUser.password !== value.oldPassword) {
+        res.sendPre(2008, null);
+        return;
+    }
+    value.id = value.userId;
+    value.updateTime = new Date();
+    value.password = value.newPassword;
+    delete value.oldPassword;
+    delete value.newPassword;
+    delete value.userId;
+    res.sendPre(await updateUser(value));
+});
+
+// 重置密码
+router.post('/reset/password', async (req: express.Request, res: GS.CustomResponse) => {
+    const { error, value } = joi.validate(req.body, {
+        phone: joi.string().required().regex(phone),
+        password: joi.string().required(),
+        hash: joi.string().required(),
+        code: joi.string().required()
+    });
+    if (error) {
+        res.sendPre(1001, formatError(error));
+        return;
+    }
+    client.getAsync(`${value.hash}_code`)
+        .then(async (code: string) => {
+            if (code !== value.code) {
+                res.sendPre(2003, null);
+                return;
+            }
+            delete value.hash;
+            delete value.code;
+            res.sendPre(await resetPassword(value));
+        })
+        .catch((error: any) => {
+            console.log(error);
+            res.sendPre(0, error);
+        });
 });
 
 export default router;

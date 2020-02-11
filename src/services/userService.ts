@@ -2,6 +2,7 @@ import dao from '../dao';
 // import GS from 'GS';
 import User from 'User';
 import { done } from '../common/util';
+import { defaultSettings } from '../game/gameConfig';
 
 /**
  * 根据登陆信息获取对应的用户信息
@@ -9,6 +10,11 @@ import { done } from '../common/util';
  */
 export const login: User.GetPasswordByParams = async (loginInfo) => {
     let validUserInfo = await dao.query('user.getPasswordByParams', loginInfo);
+    return done<User.LoginRes[]>(validUserInfo);
+};
+
+export const getUserByParams = async (userInfo: any) => {
+    let validUserInfo = await dao.query('user.getPasswordByParams', userInfo);
     return done<User.LoginRes[]>(validUserInfo);
 };
 
@@ -64,4 +70,33 @@ export const delFavourRecord: User.DelFavourRecord = async (recordId) => {
 export const addFavourRecord: User.AddFavourRecord = async (recordInfo) => {
     const { insertId } = await dao.insert('user_favour', recordInfo);
     return done<number>(insertId);
+};
+
+/**
+ * 注册新用户
+ * @param userInfo 用户信息
+ */
+export const register: User.RegisterUser = async (userInfo) => {
+    let { insertId } = await dao.insert('user', {
+        ...userInfo,
+        createTime: new Date()
+    });
+    await dao.insert('settings', {
+        userId: insertId,
+        ...defaultSettings,
+        createTime: new Date()
+    });
+    return done<number>(insertId);
+};
+
+/**
+ * 重置密码，手机号作为凭证
+ * @param param0
+ */
+export const resetPassword: User.ResetPassword = async ({ phone ,password }) => {
+    let ret = await dao.update('user', {
+        phone,
+        password
+    }, 'phone');
+    return done<any>(ret[0]);
 };

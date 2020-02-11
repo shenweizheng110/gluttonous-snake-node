@@ -7,17 +7,19 @@ import * as expressWs from 'express-ws';
 import * as cookieParser from 'cookie-parser';
 import registerRouter from './router';
 import sendHelper from './helper/sendHelper';
-
-/* import * as session from 'express-session';
-import * as connectRedis from 'connect-redis'; */
+import client from './common/redisStore';
+import * as session from 'express-session';
+import * as connectRedis from 'connect-redis';
 
 const appBase = express();
+
+const connectMultiparty = require('connect-multiparty');
 
 const logDirectory = path.join(__dirname, 'log');
 
 const FileStreamRotator = require('file-stream-rotator');
 
-// const RedisStore = connectRedis(session);
+const RedisStore = connectRedis(session);
 
 fs.existsSync(logDirectory) || fs.mkdirSync(logDirectory);
 
@@ -48,7 +50,7 @@ app.all('*', function(req: any, res: any, next: any) {
 app.use(cookieParser());
 
 // session 持久化
-/* app.use(session({
+app.use(session({
     name: 'session_id',
     secret: 'test',
     store: new RedisStore({
@@ -60,7 +62,7 @@ app.use(cookieParser());
         secure: false,
         maxAge: 1000 * 60 * 60 * 12
     }
-})) */
+}));
 
 // 路由过滤器 检测路由 检测是否未登录
 /* app.use((req: any, res: any, next: any) => {
@@ -76,18 +78,18 @@ app.use(cookieParser());
 // morgan 日志中间件
 app.use(morgan('combined', { stream: accessLogStream }));
 
+// 解析 application/json
+app.use(bodyParser.json());
+
 // 解析 application/x-www-form-urlencoded格式
 app.use(bodyParser.urlencoded({
-    extended: false
+    extended: true
 }));
 
 app.use(sendHelper);
 
-// 解析 application/json
-app.use(bodyParser.json());
-
 // 处理文件传输
-/* app.use(connectMultiparty()); */
+app.use(connectMultiparty());
 
 // 注册路由
 registerRouter(wsInstance);

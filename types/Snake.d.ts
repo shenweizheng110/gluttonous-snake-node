@@ -2,30 +2,6 @@ import { Direction, RotateOffset } from './Enum';
 import GS from 'GS';
 
 declare namespace Snake {
-    // 移动方向
-    /* const enum Direction {
-        Top = 'Top',
-        Bottom = 'Bottom',
-        Left = 'Left',
-        Right = 'Right'
-    } */
-
-    // 旋转偏移量
-    /* enum RotateOffset {
-        Top = 0,
-        Bottom = 180,
-        Left = 270,
-        Right = 90
-    } */
-
-    // 相对的方向
-/*     enum RelativeDirection {
-        Top = 'Bottom',
-        Bottom = 'Top',
-        Left = 'Right',
-        Right = 'Left',
-    } */
-
     // 方向偏移量
     interface DirectionOffset {
         'Top': [number, number];
@@ -49,6 +25,7 @@ declare namespace Snake {
         snakeCount: number;
         rotateOffset: RotateOffset;
         userConfig: UserConfig;
+        recordNumber: number;
     }
     // 蛇节点
     interface SnakeNode extends SnakeBase {
@@ -96,13 +73,9 @@ declare namespace Snake {
         userId: string;
         colors: string[];
         initDirection: Direction;
-        up: Direction;
-        down: Direction;
-        left: Direction;
-        right: Direction;
         directionCode: KeyCodeConfig;
-        speedUp: Direction;
-        initSpeed: Direction;
+        speedUp: string;
+        initSpeed: number;
         dangerColor: string;
         eyeColor: string;
     }
@@ -129,6 +102,9 @@ declare namespace Snake {
         snakeCount: number;
         rotateOffset: RotateOffset;
         userConfig: UserConfig;
+        recordNumber: number;
+
+        validEatOrGameOver: (roomId: string) => Promise<string[]>;
 
         generateSnakeByUser: (roomId: string, userId: string, userConfig: UserConfig, canvasWidth: number, canvasHeight: number) => void;
 
@@ -142,11 +118,11 @@ declare namespace Snake {
 
         recordSnakeBody: VoidFnc;
 
-        move: (payload: ShowPayload) => void;
+        move: (roomId: string) => void;
 
-        validCanEat: (payload: ShowPayload) => void;
+        validCanEat: (roomId: string) => void;
 
-        eat: (bean: any, payload: ShowPayload) => void;
+        eat: (bean: any) => void;
 
         changeDirection: (roomId: string, userId: string, keyCode: number) => void;
 
@@ -157,7 +133,19 @@ declare namespace Snake {
             };
         };
 
-        validGameOver: (payload: ShowPayload) => boolean;
+        validGameOver: () => boolean;
+
+        destoryToBean: () => void;
+
+        validIsAllOver: (roomId: string) => boolean;
+
+        validUserExist: (roomId: string, userId: string) => boolean;
+
+        validDefeated: () => boolean;
+
+        getSnakes: (roomId: string) => Snake[];
+
+        destorySpeedUp: (roomId: string, userId: string, keyCode: number) => void;
     }
 }
 

@@ -1,0 +1,29 @@
+namespace: 'game'
+
+createRecordList:
+    - insert into record_user(record_id, user_id, score, defeat, create_time, update_time) values
+    - for:
+        array: 'records'
+        sql: (:recordId, :userId, :score, :defeat, :createTime, :udpateTime)
+        seperator: ','
+
+updateRankBatch:
+    - update user_game_info set
+    - max_score = case user_id
+    - for:
+        array: 'needUpdateRank'
+        sql: when :userId then :maxScore
+        seperator: ','
+    - end,
+    - max_defeat = case user_id
+    - for:
+        array: 'needUpdateRank'
+        sql: when :userId then :maxDefeat
+        seperator: ','
+    - end
+    - where user_id in (
+    - for:
+        array: 'needUpdateRank'
+        sql: :userId
+        seperator: ','
+    - )

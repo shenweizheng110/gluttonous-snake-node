@@ -27,15 +27,16 @@ router.get('/getUser/:userId', async (req: express.Request, res: GS.CustomRespon
  * 更新用户配置
  */
 router.post('/updateUser', async (req: express.Request, res: GS.CustomResponse) => {
+    // console.log(req.body);
     const { error, value } = joi.validate(req.body, {
         userId: joi.string().required(),
-        userConfig: joi.object()
+        userConfig: joi.string().required()
     });
     if (error) {
         res.sendPre(1001, formatError(error));
         return;
     }
-    let ret = await updateUserConfig(value.userId, value.userConfig);
+    let ret = await updateUserConfig(value.userId, JSON.parse(value.userConfig));
     res.sendPre(ret);
 });
 
