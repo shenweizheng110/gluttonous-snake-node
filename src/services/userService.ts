@@ -93,10 +93,23 @@ export const register: User.RegisterUser = async (userInfo) => {
  * 重置密码，手机号作为凭证
  * @param param0
  */
-export const resetPassword: User.ResetPassword = async ({ phone ,password }) => {
+export const resetPassword: User.ResetPassword = async ({ phone, password }) => {
     let ret = await dao.update('user', {
         phone,
         password
     }, 'phone');
     return done<any>(ret[0]);
+};
+
+export const getUserScoreAndSettings = async (userId: string) => {
+    let ret = await dao.query('user.getUserInfoAndSettings', { userId });
+    return done<User.UserInfo>(ret[0]);
+};
+
+export const updateMaxScore = async ({ userId, maxScore }: any) => {
+    let ret = await dao.update('user_game_info', {
+        'user_id': userId,
+        'max_score': maxScore
+    }, 'user_id');
+    return done<User.UserInfo>(ret[0]);
 };

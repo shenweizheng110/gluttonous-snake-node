@@ -12,7 +12,9 @@ import {
     updateFavour,
     register,
     getUserByParams,
-    resetPassword
+    resetPassword,
+    getUserScoreAndSettings,
+    updateMaxScore
 } from '../services/userService';
 import client from '../common/redisStore';
 
@@ -261,6 +263,32 @@ router.post('/reset/password', async (req: express.Request, res: GS.CustomRespon
             console.log(error);
             res.sendPre(0, error);
         });
+});
+
+router.get('/scoreAndSettings', async (req: express.Request, res: GS.CustomResponse) => {
+    const { error, value } = joi.validate(req.query, {
+        userId: joi.number().required(),
+        t: joi.date()
+    });
+    if (error) {
+        res.sendPre(1001, formatError(error));
+        return;
+    }
+    let ret = await getUserScoreAndSettings(value.userId);
+    res.sendPre(ret);
+});
+
+router.post('/update/score', async (req: express.Request, res: GS.CustomResponse) => {
+    const { error, value } = joi.validate(req.body, {
+        userId: joi.number().required(),
+        maxScore: joi.string().required()
+    });
+    if (error) {
+        res.sendPre(1001, formatError(error));
+        return;
+    }
+    let ret = await updateMaxScore(value);
+    res.sendPre(ret);
 });
 
 export default router;

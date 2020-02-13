@@ -20,3 +20,8 @@ getBaseInfo:
     - max_score, max_defeat
     - from user u left join user_game_info ugi on u.id = ugi.user_id
     - where u.id = :userId
+
+getUserInfoAndSettings:
+    - select s.user_id, max_score, up, down, `left`, `right`, `start`, init_speed, init_direction
+    - from settings s left join user_game_info ugi on s.user_id = ugi.user_id
+    - where s.user_id = :userId
